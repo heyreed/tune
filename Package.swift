@@ -2,15 +2,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "PresenterMode",
+    name: "Tune",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "PresenterMode", targets: ["PresenterMode"])
+        .executable(name: "Tune", targets: ["Tune"])
     ],
     targets: [
         .executableTarget(
-            name: "PresenterMode",
-            path: "Sources/PresenterMode"
+            name: "Tune",
+            path: "Sources/Tune"
         )
     ]
 )

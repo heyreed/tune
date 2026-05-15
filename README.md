@@ -1,12 +1,14 @@
-# Presenter Mode
+# Tune
 
-A small macOS menu-bar utility that puts your Mac into a polished presentation state for screen-sharing demos. You pick a few windows; everything else is suppressed; the chosen window is staged at a consistent size against a clean background.
+> **Tune your screen for the moment. Everything else disappears.**
+
+A small macOS menu-bar utility that quiets the noise on your Mac for a screen-share. You pick a few windows; everything else gets out of the way; the chosen window is staged at a consistent size against a clean background.
 
 This is **v0.1** — a working skeleton implementing the architecture from the design doc at `/Users/reed/.claude/plans/i-have-this-problem-federated-meteor.md`. The happy path works end-to-end; a few pieces are deliberately conservative (see "Known limitations" below).
 
 ## What's in the box
 
-- **Window enumeration** — lists all visible windows from other apps (`Sources/PresenterMode/Session/WindowEnumerator.swift`).
+- **Window enumeration** — lists all visible windows from other apps (`Sources/Tune/Session/WindowEnumerator.swift`).
 - **Accessibility-driven window control** — resizes, repositions, and raises target windows (`Session/AccessibilityWindowController.swift`).
 - **Staging overlay** — full-screen window painting the chosen background behind your staged target (`Session/StagingOverlay.swift`).
 - **Window suppression** — hides any non-target app that tries to come forward during a session (`Session/WindowSuppressor.swift`).
@@ -25,19 +27,25 @@ cd /Users/reed/Desktop/Sandbox/repos/PresenterMode
 open ./build/
 ```
 
-Drag `PresenterMode.app` to `/Applications`. Launch it once — you'll get an Accessibility prompt. Open System Settings → Privacy & Security → Accessibility and enable Presenter Mode. Quit and relaunch the app to pick up the permission.
+(The repo folder is still named `PresenterMode/` from the project's earlier name — that's intentional for now and doesn't affect the app.)
+
+Drag `Tune.app` to `/Applications`. Launch it once — you'll get an Accessibility prompt. Open System Settings → Privacy & Security → Accessibility and enable Tune. Quit and relaunch the app to pick up the permission.
 
 The app lives in the menu bar (no Dock icon). The icon is a `rectangle.on.rectangle` SF Symbol.
+
+> **Upgrading from a previous build named Presenter Mode?** The bundle identifier changed (`com.reed.PresenterMode` → `com.reed.Tune`), so macOS treats Tune as a brand-new app. Open System Settings → Privacy & Security → Accessibility, remove the old `PresenterMode` entry, then launch the new `Tune.app` and re-grant Accessibility access when prompted.
 
 ## Optional: DND integration
 
 macOS doesn't expose Focus modes to third-party apps via any clean public API. To wire DND:
 
 1. Open Shortcuts.app.
-2. Create a new shortcut named exactly **`Presenter Mode DND On`** that runs the "Set Focus" action with "Do Not Disturb" turned on.
-3. Create another named exactly **`Presenter Mode DND Off`** that turns it off.
+2. Create a new shortcut named exactly **`Tune DND On`** that runs the "Set Focus" action with "Do Not Disturb" turned on.
+3. Create another named exactly **`Tune DND Off`** that turns it off.
 
-The app shells out to `shortcuts run "Presenter Mode DND On"` on session start and the off-variant on exit. If the shortcuts don't exist, the rest of the app works fine — you'll just miss the automatic DND.
+Tune shells out to `shortcuts run "Tune DND On"` on session start and the off-variant on exit. If the shortcuts don't exist, the rest of the app works fine — you'll just miss the automatic DND.
+
+> **Upgrading?** If you previously created `Presenter Mode DND On` / `Presenter Mode DND Off`, rename them to `Tune DND On` / `Tune DND Off` (or recreate them).
 
 ## Usage
 
@@ -47,7 +55,7 @@ The app shells out to `shortcuts run "Presenter Mode DND On"` on session start a
 4. During the session:
    - **Ctrl+Opt+Tab** — cycle to the next staged window.
    - **Hold Esc for 1 second** — exit and restore everything.
-   - Clicking the menu bar icon → "End Presenter Mode" also works.
+   - Clicking the menu bar icon → "End Tune" also works.
 
 ## Verification (the smoke test from the plan)
 
@@ -60,7 +68,7 @@ The app shells out to `shortcuts run "Presenter Mode DND On"` on session start a
 4. From inside Firefox, **Ctrl+Opt+Tab** → Figma comes forward, Firefox goes behind.
 5. Force a leak attempt: send yourself an iMessage → no banner appears (if DND is on). Open Slack from Spotlight → Slack window is hidden behind the staged window.
 6. **Hold Esc for 1 second** → windows restored, background gone, menu bar back, DND off.
-7. Re-enter mode. Quit Firefox while staged. The app should fall back gracefully (the suppressor stops re-raising the missing window; you can exit with Esc-hold).
+7. Re-enter Tune. Quit Firefox while staged. The app should fall back gracefully (the suppressor stops re-raising the missing window; you can exit with Esc-hold).
 
 ## Known limitations
 
@@ -76,13 +84,13 @@ These are intentional v0.1 gaps, documented so you know what's not finished rath
 ## Project layout
 
 ```
-PresenterMode/
+Tune/  (repo folder is still PresenterMode/ on disk — see Build & install)
 ├── Package.swift
 ├── README.md
-├── build-app.sh                  # wraps swift build → PresenterMode.app
+├── build-app.sh                  # wraps swift build → Tune.app
 ├── Resources/
 │   └── Info.plist                # LSUIElement, Accessibility usage description
-└── Sources/PresenterMode/
+└── Sources/Tune/
     ├── App/
     │   ├── main.swift
     │   ├── AppDelegate.swift

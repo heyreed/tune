@@ -40,7 +40,7 @@ final class LauncherWindowController {
 
         let hosting = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hosting)
-        window.title = "Presenter Mode"
+        window.title = "Tune"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
         window.center()

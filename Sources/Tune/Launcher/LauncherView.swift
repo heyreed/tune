@@ -8,8 +8,13 @@ struct LauncherView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Presenter Mode")
-                .font(.title2).bold()
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tune")
+                    .font(.title2).bold()
+                Text("Tune your screen for the moment. Everything else disappears.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
 
             Text("Pick 1–4 windows to stage. Switch between them with Ctrl+Opt+Tab during the session. Hold Esc for 1 second to exit.")
                 .font(.callout)
