@@ -16,12 +16,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         hotkeyManager = HotkeyManager()
-        hotkeyManager.register(keyCode: HotkeyManager.kVK_ANSI_P, modifiers: [.control, .shift]) { [weak self] in
-            self?.launcherController.toggle()
+
+        // Ctrl+Opt+T toggles Tune: if a session is running, end it; otherwise toggle the
+        // launcher. Ctrl+Opt is the same modifier family the cycle hotkeys use — it's chosen
+        // to avoid collisions with browser, Figma, Slack, Zoom, and macOS shortcuts.
+        hotkeyManager.register(keyCode: HotkeyManager.kVK_ANSI_T, modifiers: [.control, .option]) { [weak self] in
+            guard let self else { return }
+            if self.sessionController.isActive {
+                self.sessionController.endSessionIfActive()
+            } else {
+                self.launcherController.toggle()
+            }
         }
-        // Cycle between staged windows mid-session. Ctrl+Opt+Tab is chosen because it doesn't
-        // collide with Firefox/Chrome/Figma/Slack/Zoom/macOS shortcuts.
-        hotkeyManager.register(keyCode: HotkeyManager.kVK_Tab, modifiers: [.control, .option]) { [weak self] in
+
+        // Mid-session cycling. Ctrl+Opt+← / Ctrl+Opt+→ step through staged windows.
+        hotkeyManager.register(keyCode: HotkeyManager.kVK_LeftArrow, modifiers: [.control, .option]) { [weak self] in
+            self?.sessionController.cyclePrev()
+        }
+        hotkeyManager.register(keyCode: HotkeyManager.kVK_RightArrow, modifiers: [.control, .option]) { [weak self] in
             self?.sessionController.cycleNext()
         }
 

@@ -107,6 +107,15 @@ final class SessionController: ObservableObject {
         AccessibilityWindowController.raise(next)
     }
 
+    func cyclePrev() {
+        guard isActive, resolvedTargets.count > 1 else { return }
+        let count = resolvedTargets.count
+        activeTargetIndex = (activeTargetIndex - 1 + count) % count
+        let prev = resolvedTargets[activeTargetIndex]
+        suppressor.updateActiveTarget(prev)
+        AccessibilityWindowController.raise(prev)
+    }
+
     func endSessionIfActive() {
         guard isActive else { return }
         stopWatchdog()
