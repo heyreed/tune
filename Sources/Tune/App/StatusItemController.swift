@@ -30,7 +30,7 @@ final class StatusItemController {
 
     private func configureMenu() {
         let menu = NSMenu()
-        let openItem = NSMenuItem(title: "Open Launcher…", action: #selector(openLauncher), keyEquivalent: "t")
+        let openItem = NSMenuItem(title: "Tune Windows…", action: #selector(openLauncher), keyEquivalent: "t")
         openItem.keyEquivalentModifierMask = [.control, .option]
         openItem.target = self
         menu.addItem(openItem)

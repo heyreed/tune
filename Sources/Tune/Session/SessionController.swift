@@ -49,7 +49,7 @@ final class SessionController: ObservableObject {
         guard !resolvedTargets.isEmpty else {
             showAlert(
                 title: "Couldn't find your selected windows",
-                message: "The app tried to look up your selected windows through the Accessibility API and got nothing back. Common causes:\n\n• The windows were closed or minimized between picking them and pressing Start.\n• Accessibility permission was granted but the app needs to be relaunched to pick it up.\n\nClose this dialog, reopen the launcher, and try again.",
+                message: "The app tried to look up your selected windows through the Accessibility API and got nothing back. Common causes:\n\n• The windows were closed or minimized between picking them and pressing Start.\n• Accessibility permission was granted but the app needs to be relaunched to pick it up.\n\nClose this dialog, reopen Tune, and try again.",
                 openSettings: false
             )
             return
