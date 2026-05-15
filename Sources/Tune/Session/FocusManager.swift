@@ -15,12 +15,12 @@ import AppKit
 ///
 ///   3. Private `_CTServerConnection` API. Not viable for App Store distribution and breaks often.
 ///
-/// This implementation uses approach (1). Users install a Shortcut named "Presenter Mode DND On"
-/// and "Presenter Mode DND Off" and we shell out to `shortcuts run`. If the shortcuts don't exist
+/// This implementation uses approach (1). Users install a Shortcut named "Tune DND On"
+/// and "Tune DND Off" and we shell out to `shortcuts run`. If the shortcuts don't exist
 /// we log a warning and continue — the rest of the session still suppresses windows.
 final class FocusManager {
-    private let shortcutOn = "Presenter Mode DND On"
-    private let shortcutOff = "Presenter Mode DND Off"
+    private let shortcutOn = "Tune DND On"
+    private let shortcutOff = "Tune DND Off"
 
     func engage() {
         runShortcut(named: shortcutOn)

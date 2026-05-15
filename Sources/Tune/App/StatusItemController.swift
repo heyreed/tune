@@ -23,9 +23,9 @@ final class StatusItemController {
     private func configureButton() {
         guard let button = statusItem.button else { return }
         let symbol = sessionController.isActive ? "rectangle.inset.filled.and.person.filled" : "rectangle.on.rectangle"
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Presenter Mode")
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Tune")
         button.image?.isTemplate = true
-        button.toolTip = sessionController.isActive ? "Presenter Mode active" : "Presenter Mode"
+        button.toolTip = sessionController.isActive ? "Tune is on" : "Tune"
     }
 
     private func configureMenu() {
@@ -34,7 +34,7 @@ final class StatusItemController {
         menu.items.last?.keyEquivalentModifierMask = [.control, .shift]
         menu.items.last?.target = self
 
-        let endItem = NSMenuItem(title: "End Presenter Mode", action: #selector(endSession), keyEquivalent: "")
+        let endItem = NSMenuItem(title: "End Tune", action: #selector(endSession), keyEquivalent: "")
         endItem.target = self
         menu.addItem(endItem)
 

@@ -7,7 +7,7 @@ struct SessionConfiguration {
     var background: BackgroundPreset
 }
 
-/// The orchestrator. Owns the lifecycle of presenter mode: enter, switch, exit.
+/// The orchestrator. Owns the lifecycle of a Tune session: enter, switch, exit.
 ///
 /// Public state is `isActive` and `activeTargetIndex`. Everything else is internal.
 final class SessionController: ObservableObject {
@@ -36,7 +36,7 @@ final class SessionController: ObservableObject {
         guard AccessibilityGate.isTrusted() else {
             showAlert(
                 title: "Accessibility permission required",
-                message: "Presenter Mode can't resize or raise your windows because Accessibility access has not been granted (or was revoked when the app was reinstalled).\n\nOpen System Settings → Privacy & Security → Accessibility, remove Presenter Mode if it's listed, re-add it, and make sure the toggle is on. Then quit and relaunch the app.",
+                message: "Tune can't resize or raise your windows because Accessibility access has not been granted (or was revoked when the app was reinstalled).\n\nOpen System Settings → Privacy & Security → Accessibility, remove Tune if it's listed, re-add it, and make sure the toggle is on. Then quit and relaunch the app.",
                 openSettings: true
             )
             return

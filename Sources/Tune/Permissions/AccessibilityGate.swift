@@ -1,7 +1,7 @@
 import AppKit
 import ApplicationServices
 
-/// Checks whether Presenter Mode has Accessibility permission and prompts the user if not.
+/// Checks whether Tune has Accessibility permission and prompts the user if not.
 ///
 /// macOS does not let an app grant itself this permission. We can only nudge the system to show
 /// the "Allow this app to control your computer" prompt and open System Settings → Privacy &
@@ -26,13 +26,13 @@ enum AccessibilityGate {
 
     private static func presentExplainer() {
         let alert = NSAlert()
-        alert.messageText = "Presenter Mode needs Accessibility access"
+        alert.messageText = "Tune needs Accessibility access"
         alert.informativeText = """
-        Presenter Mode resizes and re-orders the windows you select. macOS requires Accessibility \
-        permission for any app that controls other windows.
+        Tune resizes and re-orders the windows you choose to share so your screen is clean for the \
+        moment. macOS requires Accessibility permission for any app that controls other windows.
 
-        Open System Settings → Privacy & Security → Accessibility and enable Presenter Mode. \
-        You may need to quit and reopen the app afterward.
+        Open System Settings → Privacy & Security → Accessibility and enable Tune. You may need to \
+        quit and reopen the app afterward.
         """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Open System Settings")
