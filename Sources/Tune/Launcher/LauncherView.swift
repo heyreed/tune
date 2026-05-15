@@ -16,7 +16,7 @@ struct LauncherView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text("Pick 1–4 windows to stage. Switch between them with Ctrl+Opt+Tab during the session. Hold Esc for 1 second to exit.")
+            Text("Pick 1–4 windows to stage. Switch between them with Ctrl+Opt+← / Ctrl+Opt+→ during the session. Hold Esc for 1 second to exit.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 

@@ -4,11 +4,13 @@ import Carbon.HIToolbox
 /// Carbon-backed global hotkey registry. Supports multiple hotkeys per instance.
 ///
 /// Carbon's RegisterEventHotKey is the only public API for registering system-wide hotkeys on
-/// macOS without Accessibility/Input Monitoring permission. We use it for both the launcher
-/// hotkey and the cycle-next hotkey.
+/// macOS without Accessibility/Input Monitoring permission, and it cleanly consumes the event
+/// so the focused app never sees it. All Tune shortcuts are modifier+single-key combos, which
+/// is exactly what this API supports.
 final class HotkeyManager {
-    static let kVK_ANSI_P: UInt32 = UInt32(Carbon.kVK_ANSI_P)
-    static let kVK_Tab: UInt32 = UInt32(Carbon.kVK_Tab)
+    static let kVK_ANSI_T: UInt32 = UInt32(Carbon.kVK_ANSI_T)
+    static let kVK_LeftArrow: UInt32 = UInt32(Carbon.kVK_LeftArrow)
+    static let kVK_RightArrow: UInt32 = UInt32(Carbon.kVK_RightArrow)
 
     struct Modifiers: OptionSet {
         let rawValue: UInt32
@@ -30,7 +32,7 @@ final class HotkeyManager {
         installEventHandlerIfNeeded()
         let id = nextID
         nextID += 1
-        let hotKeyID = EventHotKeyID(signature: OSType(0x504D4F44), id: id) // 'PMOD'
+        let hotKeyID = EventHotKeyID(signature: OSType(0x54554E45), id: id) // 'TUNE'
         var hotKeyRef: EventHotKeyRef?
         let status = RegisterEventHotKey(
             keyCode, modifiers.rawValue, hotKeyID, GetEventDispatcherTarget(), 0, &hotKeyRef
