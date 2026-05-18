@@ -16,61 +16,67 @@ struct WindowHandle {
 
 enum AccessibilityWindowController {
 
-    /// Resolves a DiscoveredWindow to a live AXUIElement we can manipulate.
-    /// Returns nil if the window has gone away or AX permission is missing.
+    /// Resolves a list of DiscoveredWindows to live AXUIElements, ensuring each AX window is
+    /// assigned to at most one selection. Windows that can't be matched are dropped from the
+    /// result (the caller already tolerates a short result).
     ///
-    /// Resolution strategy (tries each in order until one matches):
-    ///   1. If the app has only one AX window, return it.
-    ///   2. Closest match by bounding-box size (within 20px tolerance).
-    ///   3. Closest match by frame distance (smallest combined size + origin delta).
-    static func resolve(_ window: DiscoveredWindow) -> WindowHandle? {
-        let app = AXUIElementCreateApplication(window.ownerPID)
-        var rawWindows: AnyObject?
-        let status = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &rawWindows)
-        guard status == .success, let axWindows = rawWindows as? [AXUIElement], !axWindows.isEmpty else {
-            NSLog("AccessibilityWindowController: no AX windows for pid \(window.ownerPID) (status=\(status.rawValue))")
-            return nil
+    /// We resolve per-app rather than per-window because two selections from the same app would
+    /// otherwise be matched independently and could both claim the same AXUIElement — the symptom
+    /// being "I selected two Firefox windows but only one got repositioned."
+    ///
+    /// Per-app strategy: fetch the app's AX windows once, then for each selection greedily pick
+    /// the unclaimed AX window with the smallest combined origin+size delta from the selection's
+    /// CGWindow bounds. Greedy in selection order is good enough — the bounds typically separate
+    /// cleanly, and any tie-break is no worse than the old single-window heuristic.
+    static func resolveBatch(_ windows: [DiscoveredWindow]) -> [WindowHandle] {
+        let groups = Dictionary(grouping: windows.enumerated().map { (index: $0, window: $1) }) {
+            $0.window.ownerPID
         }
 
-        let target = window.bounds
+        var resultByOriginalIndex: [Int: WindowHandle] = [:]
 
-        // 1. Only one window? Use it.
-        if axWindows.count == 1, let frame = frame(of: axWindows[0]) {
-            return WindowHandle(cgID: window.id, ownerPID: window.ownerPID,
-                                axElement: axWindows[0], originalFrame: frame)
-        }
+        for (pid, indexed) in groups {
+            let app = AXUIElementCreateApplication(pid)
+            var rawWindows: AnyObject?
+            let status = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &rawWindows)
+            guard status == .success, let axWindows = rawWindows as? [AXUIElement], !axWindows.isEmpty else {
+                NSLog("AccessibilityWindowController: no AX windows for pid \(pid) (status=\(status.rawValue))")
+                continue
+            }
 
-        // 2. Match on both position AND size, within 20px tolerance. Position alone disambiguates
-        //    multiple windows of the same size, which size-only matching couldn't handle.
-        for axWindow in axWindows {
-            guard let frame = frame(of: axWindow) else { continue }
-            if abs(frame.minX - target.minX) < 20 &&
-               abs(frame.minY - target.minY) < 20 &&
-               abs(frame.width - target.width) < 20 &&
-               abs(frame.height - target.height) < 20 {
-                return WindowHandle(cgID: window.id, ownerPID: window.ownerPID,
-                                    axElement: axWindow, originalFrame: frame)
+            var available: [(element: AXUIElement, frame: CGRect)] = axWindows.compactMap { el in
+                guard let f = frame(of: el) else { return nil }
+                return (el, f)
+            }
+
+            for entry in indexed {
+                guard !available.isEmpty else {
+                    NSLog("AccessibilityWindowController: ran out of AX windows for pid \(pid) — selection \(entry.window.id) unmatched")
+                    break
+                }
+                let target = entry.window.bounds
+                var bestIdx = 0
+                var bestDist = CGFloat.greatestFiniteMagnitude
+                for i in available.indices {
+                    let f = available[i].frame
+                    let d = abs(f.minX - target.minX) + abs(f.minY - target.minY)
+                          + abs(f.width - target.width) + abs(f.height - target.height)
+                    if d < bestDist {
+                        bestDist = d
+                        bestIdx = i
+                    }
+                }
+                let chosen = available.remove(at: bestIdx)
+                resultByOriginalIndex[entry.index] = WindowHandle(
+                    cgID: entry.window.id,
+                    ownerPID: entry.window.ownerPID,
+                    axElement: chosen.element,
+                    originalFrame: chosen.frame
+                )
             }
         }
 
-        // 3. Closest by combined geometric distance.
-        var best: (axWindow: AXUIElement, frame: CGRect, distance: CGFloat)?
-        for axWindow in axWindows {
-            guard let frame = frame(of: axWindow) else { continue }
-            let d = abs(frame.minX - target.minX) + abs(frame.minY - target.minY)
-                  + abs(frame.width - target.width) + abs(frame.height - target.height)
-            if best == nil || d < best!.distance {
-                best = (axWindow, frame, d)
-            }
-        }
-        if let best {
-            NSLog("AccessibilityWindowController: fell back to closest-match (distance=\(best.distance)) for pid \(window.ownerPID)")
-            return WindowHandle(cgID: window.id, ownerPID: window.ownerPID,
-                                axElement: best.axWindow, originalFrame: best.frame)
-        }
-
-        NSLog("AccessibilityWindowController: could not resolve any AX window for pid \(window.ownerPID)")
-        return nil
+        return windows.indices.compactMap { resultByOriginalIndex[$0] }
     }
 
     static func frame(of axWindow: AXUIElement) -> CGRect? {
@@ -151,6 +157,34 @@ enum AccessibilityWindowController {
         if status == .success { return true }
         NSLog("AccessibilityWindowController: AXFullScreen toggle returned status=\(status.rawValue)")
         return false
+    }
+
+    /// All AX windows of `pid` that are NOT in `excluding`. Used to find "sibling" windows of a
+    /// target app — e.g. the second Firefox window when only the first is a target — so we can
+    /// stash them out of the way for the session.
+    static func otherWindows(forApp pid: pid_t, excluding: [AXUIElement]) -> [AXUIElement] {
+        let app = AXUIElementCreateApplication(pid)
+        var rawWindows: AnyObject?
+        let status = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &rawWindows)
+        guard status == .success, let axWindows = rawWindows as? [AXUIElement] else { return [] }
+        return axWindows.filter { candidate in
+            !excluding.contains { CFEqual($0, candidate) }
+        }
+    }
+
+    static func isMinimized(_ axWindow: AXUIElement) -> Bool {
+        var value: AnyObject?
+        let status = AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &value)
+        guard status == .success, let bool = value as? Bool else { return false }
+        return bool
+    }
+
+    static func setMinimized(_ minimized: Bool, of axWindow: AXUIElement) {
+        AXUIElementSetAttributeValue(
+            axWindow,
+            kAXMinimizedAttribute as CFString,
+            (minimized ? kCFBooleanTrue : kCFBooleanFalse) as CFTypeRef
+        )
     }
 
     static func raise(_ handle: WindowHandle) {

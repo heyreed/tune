@@ -14,9 +14,15 @@ final class SessionController: ObservableObject {
     @Published private(set) var isActive: Bool = false
     @Published private(set) var activeTargetIndex: Int = 0
 
+    private struct StashedWindow {
+        let axElement: AXUIElement
+        let wasMinimized: Bool   // if true at session start, leave it minimized on exit
+    }
+
     private var configuration: SessionConfiguration?
     private var resolvedTargets: [WindowHandle] = []
     private var allowedPIDs: Set<pid_t> = []
+    private var stashedWindows: [StashedWindow] = []
     private var overlay: StagingOverlay?
     private let suppressor = WindowSuppressor()
     private let focusManager = FocusManager()
@@ -45,7 +51,7 @@ final class SessionController: ObservableObject {
         let screen = resolveScreen(uuid: config.displayUUID)
 
         // Resolve AX handles for each target. Skip any we can't resolve.
-        resolvedTargets = config.targetWindows.compactMap { AccessibilityWindowController.resolve($0) }
+        resolvedTargets = AccessibilityWindowController.resolveBatch(config.targetWindows)
         guard !resolvedTargets.isEmpty else {
             showAlert(
                 title: "Couldn't find your selected windows",
@@ -69,6 +75,11 @@ final class SessionController: ObservableObject {
 
         allowedPIDs = Set(resolvedTargets.map { $0.ownerPID })
 
+        // Stash sibling windows of allowed apps (e.g. the second Firefox window when only the
+        // first is a target). Without this, hideAllNonTargetApps leaves the whole app visible
+        // because we allowlist by PID, not by AX element.
+        stashOtherWindowsOfAllowedApps()
+
         hideAllNonTargetApps()
         suppressor.start(allowedPIDs: allowedPIDs, activeTarget: resolvedTargets[0])
         focusManager.engage()
@@ -80,6 +91,24 @@ final class SessionController: ObservableObject {
         AccessibilityWindowController.raise(resolvedTargets[0])
         installEscMonitor()
         startWatchdog()
+    }
+
+    /// For each allowed app, minimize any AX windows that aren't targets. Records each one's
+    /// prior minimized state so `endSessionIfActive` can restore them correctly. Idempotent:
+    /// safe to call again from the watchdog to catch new windows opened mid-session.
+    private func stashOtherWindowsOfAllowedApps() {
+        let targetElements = resolvedTargets.map { $0.axElement }
+        for pid in allowedPIDs {
+            let others = AccessibilityWindowController.otherWindows(forApp: pid, excluding: targetElements)
+            for other in others {
+                if stashedWindows.contains(where: { CFEqual($0.axElement, other) }) { continue }
+                let wasMin = AccessibilityWindowController.isMinimized(other)
+                if !wasMin {
+                    AccessibilityWindowController.setMinimized(true, of: other)
+                }
+                stashedWindows.append(StashedWindow(axElement: other, wasMinimized: wasMin))
+            }
+        }
     }
 
     /// Hides every running app except our own and the target apps. Drops the `.regular` filter
@@ -129,6 +158,14 @@ final class SessionController: ObservableObject {
         for handle in resolvedTargets {
             AccessibilityWindowController.setFrame(handle.originalFrame, of: handle.axElement)
         }
+
+        // Un-minimize the sibling windows we stashed at session start, leaving alone the ones
+        // that were already minimized when we found them.
+        for stashed in stashedWindows where !stashed.wasMinimized {
+            AccessibilityWindowController.setMinimized(false, of: stashed.axElement)
+        }
+        stashedWindows = []
+
         resolvedTargets = []
         allowedPIDs = []
         configuration = nil
@@ -214,6 +251,14 @@ final class SessionController: ObservableObject {
             if app.processIdentifier == ownPID { continue }
             if app.activationPolicy == .prohibited { continue }
             app.hide()
+        }
+        // Catch new sibling windows (e.g. user opened a third Firefox window mid-session)
+        // and re-minimize any stashed window that got un-minimized.
+        stashOtherWindowsOfAllowedApps()
+        for stashed in stashedWindows {
+            if !AccessibilityWindowController.isMinimized(stashed.axElement) {
+                AccessibilityWindowController.setMinimized(true, of: stashed.axElement)
+            }
         }
         // Re-raise active target in case it lost the front position.
         if resolvedTargets.indices.contains(activeTargetIndex) {
