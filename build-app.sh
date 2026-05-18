@@ -24,6 +24,14 @@ mkdir -p "$CONTENTS/Resources"
 
 cp "$BIN_PATH/Tune" "$CONTENTS/MacOS/Tune"
 cp Resources/Info.plist "$CONTENTS/Info.plist"
+cp Resources/Tune.icns "$CONTENTS/Resources/Tune.icns"
+
+# SwiftPM emits resource bundles next to the binary; copy them in so
+# Bundle.module can find MenuBarIcon at runtime.
+for bundle in "$BIN_PATH"/*_*.bundle; do
+    [ -e "$bundle" ] || continue
+    cp -R "$bundle" "$CONTENTS/Resources/"
+done
 
 echo "▸ Ad-hoc code signing (sufficient for local use)…"
 codesign --force --deep --sign - "$APP_PATH"

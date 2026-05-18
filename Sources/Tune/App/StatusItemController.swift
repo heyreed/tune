@@ -22,9 +22,10 @@ final class StatusItemController {
 
     private func configureButton() {
         guard let button = statusItem.button else { return }
-        let symbol = sessionController.isActive ? "rectangle.inset.filled.and.person.filled" : "rectangle.on.rectangle"
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Tune")
-        button.image?.isTemplate = true
+        let image = Bundle.module.image(forResource: "MenuBarIcon") ?? NSImage(systemSymbolName: "rectangle.on.rectangle", accessibilityDescription: "Tune")
+        image?.size = NSSize(width: 18, height: 18)
+        image?.isTemplate = true
+        button.image = image
         button.toolTip = sessionController.isActive ? "Tune is on" : "Tune"
     }
 

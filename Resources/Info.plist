@@ -6,6 +6,8 @@
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>Tune</string>
+    <key>CFBundleIconFile</key>
+    <string>Tune</string>
     <key>CFBundleIdentifier</key>
     <string>com.reed.Tune</string>
     <key>CFBundleInfoDictionaryVersion</key>

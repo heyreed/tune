@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.png">
+    <img src="docs/logo.png" alt="Tune" width="128" height="128">
+  </picture>
+</p>
+
 # Tune
 
 > **Tune your screen for the moment. Everything else disappears.**
@@ -34,7 +41,7 @@ open ./build/
 
 Drag `Tune.app` to `/Applications`. Launch it once — you'll get an Accessibility prompt. Open **System Settings → Privacy & Security → Accessibility** and enable Tune. Quit and relaunch the app to pick up the permission.
 
-The app lives in the menu bar (no Dock icon). The icon is a `rectangle.on.rectangle` SF Symbol.
+The app lives in the menu bar (no Dock icon). The menu-bar glyph and the Finder/Dock icon both use the Tune mark (see `docs/logo.png`); the menu-bar version is rendered as a template image so it picks up your menu bar's foreground color automatically.
 
 > **Note:** The repo folder is named `PresenterMode/` from the project's earlier name. That's cosmetic — the Swift package, binary, and app bundle are all `Tune`.
 
