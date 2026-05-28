@@ -14,14 +14,29 @@ struct DiscoveredWindow: Identifiable, Hashable {
 }
 
 enum WindowEnumerator {
-    /// All on-screen normal-level windows, sorted by stacking order (frontmost first).
+    /// All normal-level windows across every Space, sorted by stacking order (frontmost first).
     /// Filters out our own windows, menubar items, and system UI.
+    ///
+    /// Note: we deliberately omit `.optionOnScreenOnly` so that windows on other Spaces show up
+    /// in the picker. With the on-screen filter, the launcher could only see whatever happened
+    /// to be on the current Space when invoked — which made the picker effectively empty if the
+    /// launcher's own Space had no apps on it.
     static func currentWindows() -> [DiscoveredWindow] {
-        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        let options: CGWindowListOption = [.excludeDesktopElements]
         guard let raw = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
             return []
         }
         let ownPID = ProcessInfo.processInfo.processIdentifier
+
+        // Cache the activation-policy lookup per PID. CGWindowList returns many rows per app
+        // and NSRunningApplication(processIdentifier:) is not free.
+        var policyCache: [pid_t: NSApplication.ActivationPolicy?] = [:]
+        func isProhibited(_ pid: pid_t) -> Bool {
+            if let cached = policyCache[pid] { return cached == .prohibited }
+            let policy = NSRunningApplication(processIdentifier: pid)?.activationPolicy
+            policyCache[pid] = policy
+            return policy == .prohibited
+        }
 
         return raw.compactMap { dict -> DiscoveredWindow? in
             guard
@@ -32,6 +47,11 @@ enum WindowEnumerator {
                 let boundsDict = dict[kCGWindowBounds as String] as? [String: CGFloat],
                 let bounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary)
             else { return nil }
+
+            // Drop windows owned by background-only processes (Safari's AutoFill helper,
+            // Spotlight, Notification Center, etc.). Their CGWindow rows leak through the
+            // layer/size filters but the user can't meaningfully "tune" them.
+            if isProhibited(pid) { return nil }
 
             let title = (dict[kCGWindowName as String] as? String) ?? ""
             // Skip zero-sized or hidden chrome windows
